@@ -1,0 +1,356 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script>```html
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fanboom — Discord Server</title>
+  <meta name="color-scheme" content="dark light">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --bg: 12 12 14;            /* #0c0c0e */
+      --surface: 18 18 22;       /* #121216 */
+      --card: 255 255 255 / 0.04;
+      --border: 255 255 255 / 0.12;
+      --text: 240 240 244;       /* near-white */
+      --muted: 180 180 190;      /* muted text */
+      --accent: 168 85 247;      /* violet-500 */
+    }
+    html[data-theme="light"] {
+      --bg: 248 249 251;         /* light bg */
+      --surface: 255 255 255;    /* panel */
+      --card: 0 0 0 / 0.04;
+      --border: 0 0 0 / 0.10;
+      --text: 18 18 22;
+      --muted: 80 80 90;
+      --accent: 139 92 246;
+    }
+
+    :root, html { scroll-behavior: smooth; }
+
+    body {
+      background: radial-gradient(1200px 800px at 10% -10%, rgba(139,92,246,.18), transparent 60%),
+                  radial-gradient(1000px 600px at 90% 10%, rgba(236,72,153,.12), transparent 60%),
+                  rgb(var(--bg));
+      color: rgb(var(--text));
+      font-feature-settings: "cv02","cv03","cv04","ss01";
+    }
+    /* Glass panels */
+    .glass { background: color-mix(in srgb, transparent, rgb(var(--surface)) 60%);
+             backdrop-filter: saturate(140%) blur(14px);
+             -webkit-backdrop-filter: saturate(140%) blur(14px);
+             border: 1px solid color-mix(in srgb, transparent, var(--border) 100%);
+             border-color: rgba(var(--text) / .08);
+    }
+    /* Accent underline for active nav */
+    .nav-link { position: relative; }
+    .nav-link.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: -10px; height: 2px; background: linear-gradient(90deg, rgba(var(--accent)/.0), rgba(var(--accent)/.9), rgba(var(--accent)/.0)); }
+
+    /* Reveal on scroll */
+    .reveal { opacity: 0; transform: translateY(12px); transition: opacity .6s ease, transform .6s ease; }
+    .reveal.show { opacity: 1; transform: none; }
+
+    /* Subtle animated blob */
+    .blob { position: fixed; inset: auto -200px -200px auto; width: 500px; height: 500px; filter: blur(60px); opacity: .25; pointer-events: none; border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, rgba(168,85,247,.55), rgba(236,72,153,.35) 40%, transparent 70%);
+      animation: float 14s ease-in-out infinite alternate;
+      z-index: 0;
+    }
+    @keyframes float { to { transform: translate(-40px, -30px) scale(1.06); opacity: .3; } }
+
+    /* Loader Styles */
+    .loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgb(var(--bg)); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; animation: pulseBg 4s ease-in-out infinite; overflow: hidden; }
+    .loader::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 20% 20%, rgba(168,85,247,0.15), rgba(236,72,153,0.1), transparent 70%); }
+    .loader.hidden { animation: explodeOut 0.6s forwards; }
+    .loader-logo { font-size: 4rem; font-weight: 800; background: linear-gradient(45deg, #A855F7, #EC4899); -webkit-background-clip: text; color: transparent; animation: glitch 2s infinite, pulseLogo 2s infinite; text-shadow: 0 0 12px rgba(168,85,247,0.9), 0 0 24px rgba(236,72,153,0.7); }
+    .loader-text { font-size: 1.2rem; color: rgb(var(--text)); opacity: 0; animation: typewriter 2s steps(30) 1s forwards; white-space: nowrap; overflow: hidden; border-right: 2px solid rgba(var(--text), 0.8); margin-top: 1rem; }
+    .progress-bar { width: 340px; height: 14px; background: rgba(var(--surface), 0.5); border-radius: 7px; overflow: hidden; margin-top: 2rem; position: relative; box-shadow: 0 0 10px rgba(168,85,247,0.5); }
+    .progress { width: 0; height: 100%; background: linear-gradient(to right, #A855F7, #EC4899); animation: progress 5s ease-in-out forwards, wave 1.5s infinite; }
+    .progress::after { content: ''; position: absolute; top: -2px; right: -10px; width: 25px; height: 25px; background: radial-gradient(circle, rgba(255,255,255,0.9), transparent); opacity: 0; animation: spark 5s linear forwards; }
+    .progress-percent { position: absolute; top: 50%; left: 0; transform: translateY(-50%); font-size: 1rem; font-weight: 600; color: rgb(var(--text)); text-shadow: 0 0 8px rgba(168,85,247,0.8); transition: left 0.1s linear; }
+    .particle { position: absolute; width: 10px; height: 10px; background: radial-gradient(circle, rgba(168,85,247,0.8), transparent); border-radius: 50%; animation: particle 2.5s ease-in-out infinite; }
+    .particle:nth-child(2) { animation-delay: 0.3s; transform: translate(30px, -30px); }
+    .particle:nth-child(3) { animation-delay: 0.6s; transform: translate(-30px, 30px); }
+    .particle:nth-child(4) { animation-delay: 0.9s; transform: translate(40px, 20px); }
+    .particle:nth-child(5) { animation-delay: 1.2s; transform: translate(-20px, -40px); }
+    .particle:nth-child(6) { animation-delay: 1.5s; transform: translate(50px, -10px); }
+    .star { position: absolute; width: 4px; height: 4px; background: rgba(255,255,255,0.6); border-radius: 50%; animation: twinkle 3s infinite; }
+    .star:nth-child(7) { top: 20%; left: 30%; animation-delay: 0.5s; }
+    .star:nth-child(8) { top: 40%; left: 70%; animation-delay: 1s; }
+    .star:nth-child(9) { top: 60%; left: 20%; animation-delay: 1.5s; }
+    .star:nth-child(10) { top: 80%; left: 50%; animation-delay: 2s; }
+    @keyframes pulseBg { 0%, 100% { opacity: 1; } 50% { opacity: 0.95; } }
+    @keyframes glitch { 
+      0% { transform: translate(0); } 
+      20% { transform: translate(-2px, 2px); } 
+      40% { transform: translate(2px, -2px); } 
+      60% { transform: translate(-1px, 1px); } 
+      80% { transform: translate(1px, -1px); } 
+      100% { transform: translate(0); } 
+    }
+    @keyframes pulseLogo { 0% { text-shadow: 0 0 12px rgba(168,85,247,0.9), 0 0 24px rgba(236,72,153,0.7); } 50% { text-shadow: 0 0 18px rgba(168,85,247,1), 0 0 36px rgba(236,72,153,1); } 100% { text-shadow: 0 0 12px rgba(168,85,247,0.9), 0 0 24px rgba(236,72,153,0.7); } }
+    @keyframes typewriter { 
+      from { width: 0; opacity: 1; } 
+      to { width: 100%; opacity: 1; } 
+    }
+    @keyframes progress { from { width: 0; } to { width: 100%; } }
+    @keyframes wave { 0% { background-position: 0 0; } 100% { background-position: 200px 0; } }
+    @keyframes spark { 0% { opacity: 0; } 90% { opacity: 0; } 95% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes particle { 0% { transform: translate(0, 0) scale(1); opacity: 0.8; } 50% { transform: translate(10px, -20px) scale(1.3); opacity: 0.4; } 100% { transform: translate(0, 0) scale(1); opacity: 0.8; } }
+    @keyframes twinkle { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.7; } }
+    @keyframes explodeOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(1.4); display: none; } }
+
+    /* Social Links Styles */
+    .social-links { position: fixed; bottom: 20px; right: 20px; z-index: 50; }
+    .social-links .glass { padding: 12px; border-radius: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .social-link { display: flex; align-items: center; gap: 8px; text-decoration: none; color: rgb(var(--muted)); font-size: 0.9rem; transition: color 0.3s ease, transform 0.3s ease; }
+    .social-link:hover { color: rgb(var(--text)); transform: scale(1.05); }
+    .social-link img { width: 20px; height: 20px; object-fit: contain; border-radius: 4px; transition: transform 0.3s ease; border: 2px solid transparent; border-color: rgba(var(--accent), 0.5); }
+    .social-link:hover img { transform: scale(1.1); filter: drop-shadow(0 0 8px rgba(168,85,247,0.8)); }
+    @media screen and (max-width: 600px) {
+      .social-links { bottom: 15px; right: 15px; }
+      .social-links .glass { padding: 10px; }
+      .social-link { font-size: 0.8rem; gap: 6px; }
+      .social-link img { width: 18px; height: 18px; }
+    }
+  </style>
+</head>
+<body class="min-h-screen antialiased relative">
+  <!-- Loader -->
+  <div class="loader">
+    <h1 class="loader-logo">Fanboom</h1>
+    <p class="loader-text">Врываемся в эпичное сообщество!</p>
+    <div class="progress-bar">
+      <div class="progress">
+        <span class="progress-percent">0%</span>
+      </div>
+    </div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="star"></div>
+    <div class="star"></div>
+    <div class="star"></div>
+    <div class="star"></div>
+  </div>
+
+  <div class="blob"></div>
+
+  <!-- Navbar -->
+  <header class="glass sticky top-0 z-50">
+    <div class="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between">
+      <a href="#home" class="text-xl md:text-2xl font-semibold tracking-tight select-none">
+        <span class="bg-gradient-to-r from-violet-400 via-fuchsia-400 to-pink-400 bg-clip-text text-transparent">Fanboom</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-6 text-sm text-[color:rgb(var(--muted))]">
+        <a href="#home" class="nav-link hover:text-[color:rgb(var(--text))]">Главная</a>
+        <a href="#history" class="nav-link hover:text-[color:rgb(var(--text))]">История</a>
+        <a href="#staff" class="nav-link hover:text-[color:rgb(var(--text))]">Вышка</a>
+        <a href="#boss" class="nav-link hover:text-[color:rgb(var(--text))]">Босс</a>
+      </nav>
+      <div class="flex items-center gap-3">
+        <button id="themeBtn" class="glass px-3 py-2 rounded-xl text-sm hover:scale-[1.02] transition" title="Переключить тему">🌓</button>
+        <a href="https://discord.gg/pYht6jnuN3" target="_blank" class="px-4 py-2 rounded-xl text-sm font-medium bg-[color:rgba(var(--accent)/.15)] border border-[color:rgba(var(--accent)/.35)] hover:bg-[color:rgba(var(--accent)/.25)] transition">Вступить</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section id="home" class="relative">
+    <div class="mx-auto max-w-6xl px-4 py-20 md:py-28 text-center">
+      <h1 class="text-4xl md:text-6xl font-semibold leading-tight tracking-tight reveal">Сервер, переживший два сноса — и всё ещё здесь</h1>
+      <p class="mt-4 md:mt-6 text-base md:text-lg text-[color:rgb(var(--muted))] max-w-2xl mx-auto reveal" style="transition-delay:.06s">Fanboom — сообщество, которое держится вместе невзирая ни на что.</p>
+      <div class="mt-8 flex items-center justify-center gap-3 reveal" style="transition-delay:.12s">
+        <a href="https://discord.gg/pYht6jnuN3" target="_blank" class="px-5 py-3 rounded-2xl font-medium bg-[color:rgba(var(--accent)/.18)] border border-[color:rgba(var(--accent)/.35)] hover:bg-[color:rgba(var(--accent)/.26)] transition">🚀 Присоединиться</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- История (glass panel with scroll) -->
+  <section id="history" class="relative">
+    <div class="mx-auto max-w-6xl px-4 py-14 md:py-18">
+      <h2 class="text-2xl md:text-3xl font-semibold tracking-tight mb-6 reveal">📜 Полная история 2025 года</h2>
+      <div class="glass rounded-2xl p-6 md:p-8 reveal">
+        <div class="text-[color:rgb(var(--muted))] leading-relaxed whitespace-pre-line max-h-[60vh] overflow-y-auto pr-2">
+2025 год. После сноса сервера, вернулись некоторые участники, которые были вынуждены покинуть сервер из-за превращения чата в токсичную помойку по вине компашки. Однако в январе происходили другие события, например 3 января закончился срок спора, Кулбой его проиграл, и Джоди как тот кто начал спор снимает его с модератора. Кулбой в свою очередь пытался доказать обратное, что спор был некой шуткой. Но переубедить второго не получилось. С середины января ничего на ФБ не происходило, мелкие словесные перепалки участников против Джоди. Они окончились жалобами на технического админа, за оскорбления, и угрозы. (Угрозы снять с ивентера). С одной стороны происходили баны твинков компашки, а с другой было обсуждение в чате 25 сезона.
+В конце января, Кулбой, Кекич, решили устроить просмотр инаугурации Дональда Трампа 20 января. 20 января началась сама инаугурация, ее смотрели в прямом эфире много людей, в том числе сам Кулбой, затем Кекич, Тони, Дюде. Под конец инаугурации Джоди обвиняет в стафф чате модераторов в нарушении правил. Были обвинения в нарушении 1.11, капса, и обсуждение политики. Кулбой и Кекич и Тони доказывали обратное, отрицая нарушение. Однако тема сменилась в срач, где троя обвинили Джоди в причине доебатся и дать выговоры троим. В итоге эта перепалка слишком сильно разозлила Джоди и он банит двух людей. Бан был на 5 минут, затем он их разбанил. В общем чате продолжилась перепалка где Кекич написал огромный текст где потребовал у Джоди "сняться и не позорится" Джоди в ответ пинганул всю высшую администрацию, и затем в ходе перепалки. Дюде, обвинил Джоди в многократных мутах без причин, оскорблениях. Так например он вспомнил про мут на 8 часов по причине "чтобы меньше выебывался" затем напомнили про мут Хэнка на 24 часа. В ходе продолжающего срача, Джоди уходит по псж, назвав всех "клоунами". 21 января ночью новым техническим админом становится Айбрух. Однако спустя некоторое время а именно в полночь, Фандикс снимает Кулбоя с поста модератора.
+Конец первой части
+
+Вторая часть. Утром 21 января Амир возвращает Кулбою модератора, однако спустя несколько часов Фандикс снова снимает Кулбоя с должности. Причину конкретную не назвал, ео заявил что был так называемый "доеб" до экс - технического админа. Словесная перепалка и попытка узнать настоящую причину снятия ни к чему не привело. Айбрух становится новым техническим админом, он удаляет часть стикеров.
+Также Джоди снес всех ботов ночью 21 января. Айбрух восстанавливает Джунипера в плане модерации и в плане бота.
+В целом за 22,23,24 января ничего в чате да и на сервере не происходило. Но был один из эпизодов который можно назвать второй попыткой снести сервер. На сервер зашел участник с ником "Морфил" который предложил помочь высшей администрации вернуть ботов и создать нового бота. Однако этот Морфил был твинком Мурзика. В ходе переговоров ему все же дают технического админа. Но дельного он ничего не сделал. Да и сам бот имел небольшие казусы в свою очередь они хотели снести сервер через бота одной командой. 24 января его снимают с технического админа. Днем 25 января ничего не происходило, однако в стафф чате был срач где Тони и Кекич пытались добиться у Фандикса причину снятия Кулбоя с модератора. Фандикс не ответил, в итоге его неубедительные ответы ни к чему не привели. В результате Фандикс мутит Тони. Вечером 25 января. Джоди возвращается на сервер, и в результате начинается срач между Фандиксом и Тони Кекичем и Кулбоем, Фриском, 63-70, Дюде, Эмкелем. Вторая сторона обвинила Джоди в сносе ботов и перечислила всю суть "диктатора" Джоди. Однако сам Джоди угрожал Тони тем что он "повторит судьбу Кулбоя" в результате срача, Фандикс снимает Кекича и Тони с поста модератора, Фриска мутят. В итоге больше не осталось админов, модераторов, технического админа. Однако позднее Джоди возвращается на пост теха. А сервер начал по сути умирать и актив стал угасать с каждым днем.
+Конец второй части
+
+Продолжение следует…
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Вышка -->
+  <section id="staff" class="relative">
+    <div class="mx-auto max-w-6xl px-4 py-14 md:py-18">
+      <h2 class="text-2xl md:text-3xl font-semibold tracking-tight mb-6 reveal">🏛 Вышка (Администрация)</h2>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <article class="glass rounded-2xl p-5 flex items-center gap-4 reveal">
+          <img src="images/owner.png" alt="Owner" class="h-12 w-12 rounded-full object-cover ring-2 ring-[color:rgba(var(--accent)/.5)]" />
+          <div>
+            <h3 class="font-medium">@Owner</h3>
+            <p class="text-sm text-[color:rgb(var(--muted))]">@𝐀𝐮𝐝𝐢𝐭𝐨𝐫 — sledgequeen</p>
+          </div>
+        </article>
+        <article class="glass rounded-2xl p-5 flex items-center gap-4 reveal" style="transition-delay:.05s">
+          <img src="images/coowner.png" alt="Co-owner" class="h-12 w-12 rounded-full object-cover ring-2 ring-[color:rgba(var(--accent)/.5)]" />
+          <div>
+            <h3 class="font-medium">@Co-owner</h3>
+            <p class="text-sm text-[color:rgb(var(--muted))]">@Добрий Амир — amirka257111</p>
+          </div>
+        </article>
+        <article class="glass rounded-2xl p-5 flex items-center gap-4 reveal" style="transition-delay:.1s">
+          <img src="images/supervisor.png" alt="Supervisor" class="h-12 w-12 rounded-full object-cover ring-2 ring-[color:rgba(var(--accent)/.5)]" />
+          <div>
+            <h3 class="font-medium">@Supervisor</h3>
+            <p class="text-sm text-[color:rgb(var(--muted))]">@Gumba — gumba005</p>
+          </div>
+        </article>
+        <article class="glass rounded-2xl p-5 flex items-center gap-4 reveal" style="transition-delay:.15s">
+          <img src="images/headadmin.png" alt="Head Admin" class="h-12 w-12 rounded-full object-cover ring-2 ring-[color:rgba(var(--accent)/.5)]" />
+          <div>
+            <h3 class="font-medium">@Head Admin</h3>
+            <p class="text-sm text-[color:rgb(var(--muted))]">@𝐀𝐧𝐝𝐫𝐞𝐲 | Head Admin — andrey17816</p>
+            <p class="text-sm text-[color:rgb(var(--muted))]">@FayXx — ffayxx</p>
+          </div>
+        </article>
+        <article class="glass rounded-2xl p-5 flex items-center gap-4 reveal" style="transition-delay:.2s">
+          <img src="images/techadmin.png" alt="Tech Admin" class="h-12 w-12 rounded-full object-cover ring-2 ring-[color:rgba(var(--accent)/.5)]" />
+          <div>
+            <h3 class="font-medium">@Tech. Admin</h3>
+            <p class="text-sm text-[color:rgb(var(--muted))]">@Gumba — gumba005</p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Босс -->
+  <section id="boss" class="relative">
+    <div class="mx-auto max-w-6xl px-4 py-14 md:py-18">
+      <h2 class="text-2xl md:text-3xl font-semibold tracking-tight mb-6 reveal">👑 Босс</h2>
+      <article class="glass rounded-2xl p-5 flex items-center gap-4 reveal">
+        <img src="images/boss.png" alt="Boss" class="h-12 w-12 rounded-full object-cover ring-2 ring-[color:rgba(var(--accent)/.5)]" />
+        <div>
+          <h3 class="font-medium">@Overseer</h3>
+          <p class="text-sm text-[color:rgb(var(--muted))]">@𝐃𝐮𝐝𝐞 — 19_dude_69</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- Social Links -->
+  <div class="social-links">
+    <div class="glass">
+      <a href="https://t.me/s/FanBoom_Official" target="_blank" class="social-link">
+        <img src="images/telegram.png" alt="Telegram">
+        Telegram
+      </a>
+      <a href="https://www.youtube.com/channel/UCyyry9vhiLOJni5ZC6QdJJQ" target="_blank" class="social-link">
+        <img src="images/youtube.png" alt="YouTube">
+        YouTube
+      </a>
+    </div>
+  </div>
+
+  <footer class="mx-auto max-w-6xl px-4 py-10 text-center text-sm text-[color:rgb(var(--muted))]">
+    © 2025 Fanboom — «Продолжение следует…»
+  </footer>
+
+  <script>
+    // Loader
+    const progressBar = document.querySelector('.progress');
+    const progressPercent = document.querySelector('.progress-percent');
+    let progress = 0;
+    const updateProgress = () => {
+      progress += 1;
+      if (progress <= 100) {
+        progressPercent.textContent = `${progress}%`;
+        progressPercent.style.left = `${progress}%`;
+        setTimeout(updateProgress, 50); // Update every 50ms (5s / 100)
+      }
+    };
+    updateProgress();
+    setTimeout(() => {
+      document.querySelector('.loader').classList.add('hidden');
+    }, 5000);
+
+    // Theme toggle
+    const btn = document.getElementById('themeBtn');
+    const root = document.documentElement;
+    const saved = localStorage.getItem('fanboom-theme');
+    if (saved) root.setAttribute('data-theme', saved);
+    btn?.addEventListener('click', () => {
+      const now = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', now);
+      localStorage.setItem('fanboom-theme', now);
+    });
+
+    // Scroll-reveal
+    const revealEls = document.querySelectorAll('.reveal');
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) if (e.isIntersecting) { e.target.classList.add('show'); io.unobserve(e.target);} }, { threshold: 0.12 });
+    revealEls.forEach(el => io.observe(el));
+
+    // Active nav link (scrollspy)
+    const sections = [...document.querySelectorAll('section[id]')];
+    const navLinks = [...document.querySelectorAll('.nav-link')];
+    const byId = (id) => navLinks.find(a => a.getAttribute('href') === `#${id}`);
+    const spy = new IntersectionObserver((entries)=>{
+      entries.forEach((e)=>{ if(e.isIntersecting){ navLinks.forEach(a=>a.classList.remove('active')); const l=byId(e.target.id); l&&l.classList.add('active'); } });
+    }, { rootMargin: '-50% 0px -50% 0px' });
+    sections.forEach(s=>spy.observe(s));
+  </script>
+</body>
+</html>
+```
